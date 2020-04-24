@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"gopkg.in/retry.v1"
 	"github.com/google/go-querystring/query"
 )
 
@@ -505,6 +506,30 @@ func parseRate(r *http.Response) Rate {
 	return rate
 }
 
+func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Response, error) {
+	// retry loop that will retry the github request
+	// with an exponential backoff for up to 30s.
+	strategy := retry.LimitTime(60*time.Second,
+		retry.Exponential{
+			Initial: 10 * time.Millisecond,
+			Factor:  1.5,
+		},
+	)
+	var resp *Response
+	var err error
+	for a := retry.Start(strategy, nil); a.Next(); {
+		if resp, err = c.do(ctx, req, v); err == nil {
+			return resp, err
+		}
+		if resp != nil && resp.StatusCode == http.StatusBadGateway {
+			continue
+		} else {
+			break
+		}
+	}
+	return resp, err
+}
+
 // Do sends an API request and returns the API response. The API response is
 // JSON decoded and stored in the value pointed to by v, or returned as an
 // error if an API error has occurred. If v implements the io.Writer
@@ -514,7 +539,7 @@ func parseRate(r *http.Response) Rate {
 //
 // The provided ctx must be non-nil, if it is nil an error is returned. If it is canceled or times out,
 // ctx.Err() will be returned.
-func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Response, error) {
+func (c *Client) do(ctx context.Context, req *http.Request, v interface{}) (*Response, error) {
 	if ctx == nil {
 		return nil, errors.New("context must be non-nil")
 	}
