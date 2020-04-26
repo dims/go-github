@@ -521,7 +521,9 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Res
 		if resp, err = c.do(ctx, req, v); err == nil {
 			return resp, err
 		}
-		if resp != nil && resp.StatusCode == http.StatusBadGateway {
+		if strings.Contains(err.Error(), "TLS handshake timeout") {
+			continue
+		} else if resp != nil && resp.StatusCode == http.StatusBadGateway {
 			continue
 		} else {
 			break
