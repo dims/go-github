@@ -8,6 +8,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
 	google.golang.org/appengine v1.1.0
 	gopkg.in/retry.v1 v1.0.3
+	k8s.io/klog v1.0.0
 )
 
 go 1.13

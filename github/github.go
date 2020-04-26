@@ -16,7 +16,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/google/go-querystring/query"
 	"gopkg.in/retry.v1"
+	"k8s.io/klog"
 )
 
 const (
@@ -510,7 +510,7 @@ func parseRate(r *http.Response) Rate {
 func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Response, error) {
 	// retry loop that will retry the github request
 	// with an exponential backoff for up to 30s.
-	strategy := retry.LimitTime(60*time.Second,
+	strategy := retry.LimitTime(240*time.Second,
 		retry.Exponential{
 			Initial: 10 * time.Millisecond,
 			Factor:  1.5,
@@ -523,10 +523,10 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Res
 			return resp, err
 		}
 		if strings.Contains(err.Error(), "TLS handshake timeout") {
-			log.Printf("%s", err)
+			klog.Warningf("%s", err)
 			continue
 		} else if resp != nil && resp.StatusCode == http.StatusBadGateway {
-			log.Printf("request to bad proxy = %v; want 502 StatusBadGateway", resp.Status)
+			klog.Warningf("request to bad proxy = %v; want 502 StatusBadGateway", resp.Status)
 			continue
 		} else {
 			break
