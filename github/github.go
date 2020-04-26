@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -24,8 +25,8 @@ import (
 	"sync"
 	"time"
 
-	"gopkg.in/retry.v1"
 	"github.com/google/go-querystring/query"
+	"gopkg.in/retry.v1"
 )
 
 const (
@@ -522,8 +523,10 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Res
 			return resp, err
 		}
 		if strings.Contains(err.Error(), "TLS handshake timeout") {
+			log.Printf("%s", err)
 			continue
 		} else if resp != nil && resp.StatusCode == http.StatusBadGateway {
+			log.Printf("request to bad proxy = %v; want 502 StatusBadGateway", resp.Status)
 			continue
 		} else {
 			break
